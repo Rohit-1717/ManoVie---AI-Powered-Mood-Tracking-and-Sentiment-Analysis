@@ -1,0 +1,1 @@
+export const DB_NAME = "ManoVie_Main_server"
