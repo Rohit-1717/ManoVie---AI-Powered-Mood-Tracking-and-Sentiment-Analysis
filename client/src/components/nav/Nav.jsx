@@ -1,102 +1,154 @@
-import { useState, useEffect } from "react";
-import { FaBars, FaTimes, FaMoon, FaSun } from "react-icons/fa";
+import React from "react";
+import { MdDarkMode, MdLightMode } from "react-icons/md";
+import useTheme from "../../hooks/useTheme";
+import { NavLink } from "react-router-dom";
 
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+function Nav() {
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <nav className="navbar bg-base-100 shadow-md px-4 md:px-12 lg:px-20 py-4">
-      {/* Navbar Start */}
-      <div className="navbar-start flex items-center">
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="btn btn-ghost lg:hidden"
-        >
-          {isOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
-        </button>
+    <div className="mx-auto md:px-16 lg:px-20">
+      <div className="navbar bg-base-300">
+        <div className="navbar-start">
+          <div className="dropdown">
+            <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 12h8m-8 6h16"
+                />
+              </svg>
+            </div>
+            <ul
+              tabIndex={0}
+              className="menu menu-sm dropdown-content bg-base-100 rounded-box z-10 mt-3 w-52 p-2 shadow"
+            >
+              <li>
+                <NavLink
+                  to="/"
+                  className={({ isActive }) =>
+                    isActive ? "text-primary font-bold" : ""
+                  }
+                >
+                  Home
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/about"
+                  className={({ isActive }) =>
+                    isActive ? "text-primary font-bold" : ""
+                  }
+                >
+                  About
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/features"
+                  className={({ isActive }) =>
+                    isActive ? "text-primary font-bold" : ""
+                  }
+                >
+                  Features
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/contact"
+                  className={({ isActive }) =>
+                    isActive ? "text-primary font-bold" : ""
+                  }
+                >
+                  Contact
+                </NavLink>
+              </li>
+            </ul>
+          </div>
+          <div className="flex items-center justify-between">
+            <img
+              className="h-12 w-12 lg:h-18 lg:w-18"
+              src="./ManoVie.svg"
+              alt="Logo_Manovie"
+            />
+            <NavLink to="/" className="text-xl font-bold">
+              ManoVie
+            </NavLink>
+          </div>
+        </div>
 
-        {/* Logo */}
-        <div className="flex items-center space-x-2 ml-4 lg:ml-0">
-          <img
-            src="/ManoVie.svg"
-            alt="ManoVie Logo"
-            className="h-10 w-10  lg:h-16 w-auto "
-          />
-          <a className="text-2xl font-bold text-primary  ml-0.5">ManoVie</a>
+        <div className="navbar-center hidden lg:flex">
+          <ul className="menu menu-horizontal px-1">
+            <li>
+              <NavLink
+                to="/"
+                className={({ isActive }) =>
+                  isActive ? "text-primary font-bold" : "hover:text-primary"
+                }
+              >
+                Home
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/about"
+                className={({ isActive }) =>
+                  isActive ? "text-primary font-bold" : "hover:text-primary"
+                }
+              >
+                About
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/features"
+                className={({ isActive }) =>
+                  isActive ? "text-primary font-bold" : "hover:text-primary"
+                }
+              >
+                Features
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/contact"
+                className={({ isActive }) =>
+                  isActive ? "text-primary font-bold" : "hover:text-primary"
+                }
+              >
+                Contact
+              </NavLink>
+            </li>
+          </ul>
+        </div>
+
+        {/* Navbar End Section */}
+        <div className="navbar-end flex gap-4 items-center">
+          {/* Dark Mode Toggle Button */}
+          <button className="btn btn-outline" onClick={toggleTheme}>
+            {theme === "light" ? (
+              <MdDarkMode className="text-xl" />
+            ) : (
+              <MdLightMode className="text-xl" />
+            )}
+          </button>
+
+          {/* Login Button */}
+          <NavLink to="/login" className="btn btn-primary">
+            Login
+          </NavLink>
         </div>
       </div>
-
-      {/* Navbar Center - Desktop Menu */}
-      <div className="navbar-center hidden lg:flex flex-grow justify-center">
-        <ul className="menu menu-horizontal space-x-6 text-lg">
-          <li>
-            <a href="/">Home</a>
-          </li>
-          <li>
-            <a href="/features">Features</a>
-          </li>
-          <li>
-            <a href="/about">About</a>
-          </li>
-          <li>
-            <a href="/contact">Contact</a>
-          </li>
-        </ul>
-      </div>
-
-      {/* Navbar End - Buttons */}
-      <div className="navbar-end space-x-4">
-        {/* Theme Toggle Button */}
-        <button
-          className="btn btn-ghost"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-        >
-          {theme === "light" ? <FaMoon size={20} /> : <FaSun size={20} />}
-        </button>
-
-        {/* CTA Buttons */}
-        <button className="btn btn-outline btn-primary hidden md:inline-block">
-          Login
-        </button>
-        <button className="btn btn-primary hidden md:inline-block">
-          Sign Up
-        </button>
-      </div>
-
-      {/* Mobile Dropdown */}
-      {isOpen && (
-        <ul className="absolute left-0 top-16 z-50 w-full bg-base-100 p-4 shadow-md lg:hidden">
-          <li>
-            <a href="/">Home</a>
-          </li>
-          <li>
-            <a href="/features">Features</a>
-          </li>
-          <li>
-            <a href="/about">About</a>
-          </li>
-          <li>
-            <a href="/contact">Contact</a>
-          </li>
-          <li>
-            <button className="btn btn-outline btn-primary w-full mt-2">
-              Login
-            </button>
-          </li>
-          <li>
-            <button className="btn btn-primary w-full mt-2">Sign Up</button>
-          </li>
-        </ul>
-      )}
-    </nav>
+    </div>
   );
-};
+}
 
-export default Navbar;
+export default Nav;

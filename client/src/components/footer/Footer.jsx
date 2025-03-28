@@ -2,7 +2,7 @@ import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
 
 export default function Footer() {
   return (
-    <footer className="bg-base-200 text-base-content">
+    <footer className="bg-base-300 text-base-content">
       <div className="container mx-auto px-8 md:px-16 lg:px-20 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center text-center md:text-left">
           {/* Logo & Description */}
@@ -19,10 +19,10 @@ export default function Footer() {
               Home
             </a>
             <a href="#" className="hover:text-primary">
-              Features
+              About
             </a>
             <a href="#" className="hover:text-primary">
-              Blog
+              Features
             </a>
             <a href="#" className="hover:text-primary">
               Contact

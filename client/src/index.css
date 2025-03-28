@@ -2,6 +2,10 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@plugin "daisyui" {
+  themes: black, wireframe; /* Only include 'black' and 'wireframe' */
+}
+
 body {
   font-family: "Inter", sans-serif;
 }
