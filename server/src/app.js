@@ -30,6 +30,4 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/loginLog", logInLog);
 app.use("/api/v1/users/sentiments", sentimentRoutes);
 
-// http://localhost:8000/api/v1/users/register
-
 export { app };

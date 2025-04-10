@@ -4,7 +4,7 @@ import { UserSentiment } from "../models/sentiment.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-// import mongoose from "mongoose";
+import moment from "moment";
 
 // ✅ 1. Analyze Text and Store Sentiment & Toxicity Data
 export const analyzeText = asyncHandler(async (req, res) => {
@@ -67,105 +67,184 @@ export const analyzeText = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, responseData, "Analysis successful"));
 });
 
-// ✅ 2. Get User's Sentiment History (for visualization)
-export const getUserSentiments = asyncHandler(async (req, res) => {
+// ✅ 2. Mood Trend Over Time
+export const getMoodTrends = asyncHandler(async (req, res) => {
   const userId = req.user._id;
+  const range = req.query.range || "week";
 
-  const sentiments = await UserSentiment.find({ userId }).sort({
-    analyzedAt: -1,
-  });
+  const now = new Date();
+  let startDate;
 
-  if (!sentiments.length) {
-    throw new ApiError(404, "No sentiment data found for this user");
+  if (range === "month") {
+    startDate = new Date(now.setMonth(now.getMonth() - 1));
+  } else if (range === "year") {
+    startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+  } else {
+    startDate = new Date(now.setDate(now.getDate() - 7));
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        sentiments,
-        "User sentiment history retrieved successfully"
-      )
-    );
+  const trends = await UserSentiment.aggregate([
+    { $match: { userId, analyzedAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$analyzedAt" },
+          month: { $month: "$analyzedAt" },
+          day: { $dayOfMonth: "$analyzedAt" },
+        },
+        avgSentiment: { $avg: "$sentimentScore" },
+        avgToxicity: { $avg: "$toxicityScore" },
+      },
+    },
+    {
+      $project: {
+        date: {
+          $dateFromParts: {
+            year: "$_id.year",
+            month: "$_id.month",
+            day: "$_id.day",
+          },
+        },
+        avgSentiment: 1,
+        avgToxicity: 1,
+        _id: 0,
+      },
+    },
+    { $sort: { date: 1 } },
+  ]);
+
+  res.status(200).json(new ApiResponse(200, trends, "Mood trends"));
 });
 
-// ✅ 3. Get Sentiment & Toxicity Trends (Weekly, Monthly, Yearly)
-export const getSentimentTrends = asyncHandler(async (req, res) => {
+// ✅ 3. Get Mood Summary
+export const getMoodSummary = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { period } = req.query; // "week", "month", "year"
 
-  let timeUnit;
-  if (period === "week") timeUnit = { $week: "$analyzedAt" };
-  else if (period === "month") timeUnit = { $month: "$analyzedAt" };
-  else if (period === "year") timeUnit = { $year: "$analyzedAt" };
-  else
-    throw new ApiError(400, "Invalid period. Use 'week', 'month', or 'year'");
-
-  const trendData = await UserSentiment.aggregate([
+  const results = await UserSentiment.aggregate([
     { $match: { userId } },
     {
       $group: {
-        _id: timeUnit,
-        avgSentimentScore: { $avg: "$sentimentScore" },
-        avgToxicityScore: { $avg: "$toxicityScore" },
+        _id: "$sentiment",
         count: { $sum: 1 },
+        avgSentiment: { $avg: "$sentimentScore" },
+        avgToxicity: { $avg: "$toxicityScore" },
       },
     },
-    { $sort: { _id: 1 } },
+    { $sort: { count: -1 } },
   ]);
 
-  if (!trendData.length) {
-    throw new ApiError(404, "No sentiment trends found");
+  if (results.length === 0) {
+    return res.status(200).json(new ApiResponse(200, null, "No data yet"));
   }
 
-  return res
+  const moodEmojiMap = {
+    positive: "😊",
+    neutral: "😐",
+    negative: "😔",
+  };
+
+  const topMood = results[0];
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        mostFrequentMood: topMood._id,
+        emoji: moodEmojiMap[topMood._id] || "🤖",
+        avgSentiment: topMood.avgSentiment,
+        avgToxicity: topMood.avgToxicity,
+        counts: results.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {}),
+      },
+      "Mood summary"
+    )
+  );
+});
+
+// 4. Total Journals
+
+export const getTotalJournals = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const count = await UserSentiment.countDocuments({ userId });
+
+  res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        userId,
-        trendData,
-        `Sentiment trends retrieved for ${period}`
-      )
+      new ApiResponse(200, { totalJournals: count }, "Total journal entries")
     );
 });
 
-// export const getSentimentTrends = asyncHandler(async (req, res) => {
-//   const userId = req.user._id; // User ID from auth middleware
-//   const { period } = req.query; // "week", "month", "year"
+// 5.Get Mood History Controller
+export const getMoodHistory = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { range = "week" } = req.query;
 
-//   // ✅ Validate period
-//   if (!["week", "month", "year"].includes(period)) {
-//     throw new ApiError(400, "Invalid period. Use 'week', 'month', or 'year'");
-//   }
+  let startDate = new Date();
+  if (range === "month") {
+    startDate.setMonth(startDate.getMonth() - 1);
+  } else if (range === "year") {
+    startDate.setFullYear(startDate.getFullYear() - 1);
+  } else {
+    startDate.setDate(startDate.getDate() - 7);
+  }
 
-//   console.log("🔍 User ID:", userId);
+  const entries = await UserSentiment.find({
+    userId,
+    analyzedAt: { $gte: startDate },
+  }).sort({ analyzedAt: -1 });
 
-//   // ✅ Aggregation Query with Date Grouping Fix
-//   const trendData = await UserSentiment.aggregate([
-//     { $match: { userId: new mongoose.Types.ObjectId(userId) } }, // Ensure ObjectId format
-//     {
-//       $group: {
-//         _id: {
-//           $dateToString: {
-//             format: period === "week" ? "%Y-%U" : period === "month" ? "%Y-%m" : "%Y",
-//             date: "$analyzedAt",
-//           },
-//         },
-//         avgSentimentScore: { $avg: "$sentimentScore" },
-//         avgToxicityScore: { $avg: "$toxicityScore" },
-//         count: { $sum: 1 },
-//       },
-//     },
-//     { $sort: { _id: 1 } },
-//   ]);
+  const history = entries.map((entry) => ({
+    text: entry.text,
+    sentiment: entry.sentiment,
+    sentimentScore: entry.sentimentScore,
+    toxicity: entry.toxicity,
+    toxicityScore: entry.toxicityScore,
+    analyzedAt: entry.analyzedAt,
+  }));
 
-//   // console.log("🔍 Aggregation Result:", trendData);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, history, "Mood history retrieved successfully"));
+});
 
-//   if (!trendData.length) {
-//     throw new ApiError(404, "No sentiment trends found");
-//   }
+export const getUserWeeklyStability = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
 
-//   return res.status(200).json(new ApiResponse(200, trendData, `Sentiment trends retrieved for ${period}`));
-// });
+  // Get all sentiments from the last 7 days
+  const oneWeekAgo = moment().subtract(7, "days").toDate();
+
+  const sentiments = await UserSentiment.find({
+    userId,
+    createdAt: { $gte: oneWeekAgo },
+  });
+
+  if (!sentiments || sentiments.length === 0) {
+    return res.status(200).json({
+      success: true,
+      weeklyStability: "No Data",
+    });
+  }
+
+  const scores = sentiments.map((entry) => entry.sentimentScore);
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  const diff = max - min;
+
+  let weeklyStability = "Stable";
+
+  if (diff > 0.4) weeklyStability = "Unstable";
+  else if (diff > 0.2) weeklyStability = "Slightly Unstable";
+
+  res.status(200).json({
+    success: true,
+    weeklyStability,
+    scoreRange: {
+      min: min.toFixed(3),
+      max: max.toFixed(3),
+      difference: diff.toFixed(3),
+    },
+    totalEntries: sentiments.length,
+  });
+});

@@ -116,7 +116,6 @@ const loginUser = asyncHandler(async (req, res) => {
     user._id
   );
 
-
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
@@ -124,7 +123,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const options = { httpOnly: true, secure: true };
 
   await logUserLogin(user._id, req);
-  
+
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)
@@ -299,6 +298,32 @@ const resetPassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, null, "Password reset successful"));
 });
 
+const changePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    throw new ApiError(400, "Old and new passwords are required");
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+  if (!isPasswordCorrect) {
+    throw new ApiError(401, "Old password is incorrect");
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "🔒 Password changed successfully"));
+});
+
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
@@ -306,9 +331,9 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { fullName, username } = req.body;
+  const { fullName, bio, email } = req.body;
 
-  if (!fullName || !username) {
+  if (!fullName || !bio || !email) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -317,7 +342,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     {
       $set: {
         fullName,
-        username,
+        bio,
+        email,
       },
     },
     { new: true }
@@ -366,6 +392,7 @@ export {
   refreshAccessToken,
   forgotPassword,
   resetPassword,
+  changePassword,
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
