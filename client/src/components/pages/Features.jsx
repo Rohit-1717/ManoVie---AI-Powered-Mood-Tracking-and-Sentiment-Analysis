@@ -21,14 +21,14 @@ function Features() {
   return (
     <div className="bg-base-300 text-base-content">
       <div className="container mx-auto px-8 md:px-16 lg:px-20 py-10">
-        <h1 className="text-5xl font-bold text-primary mb-10">Features</h1>
+        <h1 className="text-5xl font-bold text-zinc-600 mb-10">Features</h1>
 
         {/* Features Timeline */}
         <div className="relative border-l-4 border-primary pl-8 space-y-10">
           {[
             {
               icon: (
-                <FaUserLock className="text-4xl lg:text-2xl text-primary" />
+                <FaUserLock className="text-4xl lg:text-2xl text-zinc-600" />
               ),
               title: "User Authentication",
               desc: "Secure login/signup with JWT authentication.",
@@ -82,13 +82,13 @@ function Features() {
         </div>
 
         {/* Future Enhancements Grid */}
-        <h2 className="text-4xl font-bold text-primary mt-16 mb-8">
+        <h2 className="text-4xl font-bold text-zinc-600 mt-16 mb-8">
           Future Enhancements
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[
             {
-              icon: <FaUsers className="text-5xl text-primary" />,
+              icon: <FaUsers className="text-5xl text-zinc-600" />,
               title: "Community Support Features",
               desc: "Allow users to share moods with trusted individuals.",
             },

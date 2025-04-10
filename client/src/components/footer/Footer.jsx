@@ -7,7 +7,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center text-center md:text-left">
           {/* Logo & Description */}
           <div>
-            <h2 className="text-2xl font-bold text-primary">ManoVie</h2>
+            <h2 className="text-2xl font-bold text-zinc-600">ManoVie</h2>
             <p className="mt-2 text-gray-500 dark:text-gray-400">
               Empowering mental well-being through AI-driven insights.
             </p>

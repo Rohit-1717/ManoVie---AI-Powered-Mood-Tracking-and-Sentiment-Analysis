@@ -1,14 +1,25 @@
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useForm } from "react-hook-form";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import useAuthStore from "../../store/useAuthStore";
 
 function Login() {
   const { register, handleSubmit } = useForm();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const loginUser = useAuthStore((state) => state.loginUser);
+  const navigate = useNavigate();
 
-  const onSubmit = (data) => {
-    console.log("Login Data:", data);
+  const onSubmit = async (data) => {
+    try {
+      const result = await loginUser(data);
+      if (result) {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      setErrorMessage("Invalid username or password. Please try again.");
+    }
   };
 
   return (
@@ -24,19 +35,23 @@ function Login() {
 
         <div className="card w-full max-w-md bg-base-200 rounded-2xl shadow-2xl p-8">
           <h2 className="text-3xl font-bold text-center mb-4">Welcome Back!</h2>
-          <p className="text-center text mb-4">
+          <p className="text-center mb-4">
             Login to track your mood and improve well-being.
           </p>
+
+          {errorMessage && (
+            <p className="text-red-500 text-center mb-2">{errorMessage}</p>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Email</span>
+                <span className="label-text">Username</span>
               </label>
               <input
-                type="email"
-                {...register("email", { required: true })}
-                placeholder="Enter your email"
+                type="text"
+                {...register("username", { required: true })}
+                placeholder="Enter your username"
                 className="input input-bordered w-full rounded-md"
               />
             </div>

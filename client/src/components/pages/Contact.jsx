@@ -22,7 +22,7 @@ function Contact() {
   return (
     <div className="bg-base-300 min-h-screen flex items-center justify-center py-10 px-5">
       <div className="bg-base-100 shadow-xl p-10 rounded-lg max-w-2xl w-full">
-        <h2 className="text-3xl font-bold text-primary text-center mb-6">
+        <h2 className="text-3xl font-bold text-zinc-600 text-center mb-6">
           Contact Us
         </h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

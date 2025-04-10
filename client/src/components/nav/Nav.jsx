@@ -1,18 +1,27 @@
 import React from "react";
 import { MdDarkMode, MdLightMode } from "react-icons/md";
-import { NavLink } from "react-router-dom";
-import useThemeStore from "../../hooks/useTheme"; // Ensure correct import
-import useAuthStore from "../../hooks/useAuth";
+import { NavLink, useNavigate } from "react-router-dom";
+import useThemeStore from "../../hooks/useTheme";
+import useAuthStore from "../../store/useAuthStore";
 
 function Nav() {
   const { theme, toggleTheme } = useThemeStore();
-  const { isLoggedIn, user, logout } = useAuthStore(); // Get authentication state
+  const { isAuthenticated, user, logoutUser } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate("/login");
+  };
+
+  const userDisplayName = user?.fullName || user?.username || "User";
 
   return (
     <div className="mx-auto md:px-16 lg:px-20">
       <div className="navbar bg-base-300">
+        {/* Navbar Start */}
         <div className="navbar-start">
-          {/* Dropdown for Mobile Navigation */}
+          {/* Mobile Dropdown */}
           <div className="dropdown">
             <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
               <svg
@@ -53,7 +62,7 @@ function Nav() {
           <div className="flex items-center">
             <img
               className="h-12 w-12 lg:h-18 lg:w-18"
-              src="./ManoVie.svg"
+              src="/ManoVie.svg"
               alt="ManoVie Logo"
             />
             <NavLink to="/" className="text-xl font-bold ml-2">
@@ -62,7 +71,7 @@ function Nav() {
           </div>
         </div>
 
-        {/* Navbar Center (Desktop Navigation) */}
+        {/* Center Navigation (visible on desktop) */}
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal px-1">
             <li>
@@ -80,9 +89,9 @@ function Nav() {
           </ul>
         </div>
 
-        {/* Navbar End Section */}
+        {/* Navbar End */}
         <div className="navbar-end flex gap-4 items-center">
-          {/* Dark Mode Toggle */}
+          {/* Theme toggle */}
           <button className="btn btn-outline rounded-md" onClick={toggleTheme}>
             {theme === "wireframe" ? (
               <MdDarkMode className="text-xl" />
@@ -91,33 +100,37 @@ function Nav() {
             )}
           </button>
 
-          {/* Show Avatar if Logged In, Otherwise Show Login Button */}
-          {isLoggedIn ? (
-            <div className="dropdown dropdown-end ">
+          {/* Authenticated Section */}
+          {isAuthenticated && user ? (
+            <div className="dropdown dropdown-end">
               <div
                 tabIndex={0}
                 role="button"
-                className="avatar btn btn-ghost btn-circle"
+                className="avatar btn btn-ghost btn-circle tooltip"
+                data-tip={userDisplayName}
               >
                 <div className="w-10 rounded-full">
                   <img
-                    src={user?.avatar || "/default-avatar.png"}
+                    src={user.avatar || "/default-avatar.png"}
                     alt="User Avatar"
                   />
                 </div>
               </div>
               <ul
                 tabIndex={0}
-                className="menu menu-sm dropdown-content bg-base-100 rounded-md shadow mt-3 w-40"
+                className="menu menu-sm dropdown-content bg-base-100 rounded-md shadow mt-3 w-44"
               >
                 <li>
                   <NavLink to="/profile">Profile</NavLink>
                 </li>
                 <li>
+                  <NavLink to="/dashboard">Dashboard</NavLink>
+                </li>
+                <li>
                   <NavLink to="/settings">Settings</NavLink>
                 </li>
                 <li>
-                  <button onClick={logout}>Logout</button>
+                  <button onClick={handleLogout}>Logout</button>
                 </li>
               </ul>
             </div>

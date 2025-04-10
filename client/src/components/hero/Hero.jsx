@@ -119,7 +119,7 @@ function Hero() {
     //   </div>
     // </div>
 
-    <div className="bg-base-200 min-h-screen mx-auto md:px-16 lg:px-20 flex flex-col">
+    <div className="bg-base-300 min-h-screen mx-auto md:px-16 lg:px-20 flex flex-col">
       {/* Hero Section */}
       <div className="hero w-full flex flex-col lg:flex-row-reverse items-center mt-10">
         {/* Line Chart Section */}
@@ -179,8 +179,8 @@ function Hero() {
         </div>
 
         {/* Text Content */}
-        <div className="lg:w-1/2 text-center lg:text-left px-6">
-          <h1 className="text-5xl font-bold text-primary">
+        <div className="lg:w-1/2 text-center lg:text-left px-6 ">
+          <h1 className="text-5xl font-bold text-zinc-600">
             Track Your Mood Effortlessly
           </h1>
           <p className="py-6 text-lg text-justify">
@@ -196,10 +196,10 @@ function Hero() {
       </div>
 
       {/* Key Features Section */}
-      <div className="bg-base-200 py-12 px-6">
+      <div className="bg-base-200 py-12 px-6 rounded-md mb-4">
         {/* Heading */}
         <div className="mb-8">
-          <h1 className="text-5xl font-bold text-primary">Key Features</h1>
+          <h1 className="text-5xl font-bold text-zinc-600">Key Features</h1>
         </div>
 
         {/* Feature Cards */}
@@ -310,7 +310,7 @@ function Hero() {
       {/* Testimonials Section */}
 
       <div className="Testimonial mb-10">
-        <h1 className="text-5xl font-bold text-primary px-6">
+        <h1 className="text-5xl font-bold text-zinc-600 px-6 mt-10 mb-4 ">
           What Our Users Say
         </h1>
 
