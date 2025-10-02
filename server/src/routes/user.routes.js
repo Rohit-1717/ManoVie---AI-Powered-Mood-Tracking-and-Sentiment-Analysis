@@ -3,7 +3,6 @@ import {
   loginUser,
   logoutUser,
   registerUser,
-  refreshAccessToken,
   getCurrentUser,
   updateUserAvatar,
   updateAccountDetails,
@@ -31,10 +30,11 @@ router.route("/login").post(loginUser);
 
 //secured routes
 router.route("/logout").post(verifyJWT, logoutUser);
-router.route("/me").get(refreshAccessToken);
+router.route("/me").get(getCurrentUser); 
 router.route("/forgot-password").post(forgotPassword);
 router.route("/reset-password/:token").post(resetPassword);
 router.route("/current-user").get(verifyJWT, getCurrentUser);
+
 router.route("/update-account").patch(verifyJWT, updateAccountDetails);
 router.route("/change-password").patch(verifyJWT, changePassword);
 

@@ -1,30 +1,45 @@
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useForm } from "react-hook-form";
 import { NavLink, useNavigate } from "react-router-dom";
 import useAuthStore from "../../store/useAuthStore";
+import DemoCredentials from "../demoCredentials/DemoCredentials";
+
 
 function Login() {
-  const { register, handleSubmit } = useForm();
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const loginUser = useAuthStore((state) => state.loginUser);
   const navigate = useNavigate();
 
-  const onSubmit = async (data) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const username = e.target.username.value;
+    const password = e.target.password.value;
+
     try {
-      const result = await loginUser(data);
-      if (result) {
-        navigate("/dashboard");
+      const res = await loginUser({ username, password });
+
+      if (!res.success) {
+        throw new Error(res.message || "Login failed");
       }
+
+      navigate("/dashboard");
     } catch (err) {
-      setErrorMessage("Invalid username or password. Please try again.");
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="hero min-h-screen bg-base-300">
-      <div className="hero-content flex-col lg:flex-row gap-10">
+      <div className="hero-content flex-col lg:flex-row gap-10 w-full">
+        {/* Left Image */}
         <div className="hidden lg:flex w-1/2">
           <img
             src="./login_Page_bg.png"
@@ -33,66 +48,78 @@ function Login() {
           />
         </div>
 
-        <div className="card w-full max-w-md bg-base-200 rounded-2xl shadow-2xl p-8">
-          <h2 className="text-3xl font-bold text-center mb-4">Welcome Back!</h2>
-          <p className="text-center mb-4">
-            Login to track your mood and improve well-being.
-          </p>
+        {/* Right Card */}
+        <div className="w-full max-w-md flex flex-col gap-4">
+          <div className="card bg-base-200 rounded-2xl shadow-2xl p-8 flex flex-col gap-4">
+            <h2 className="text-3xl font-bold text-center">Welcome Back!</h2>
+            <p className="text-center text-sm sm:text-base">
+              Login to track your mood and improve well-being.
+            </p>
 
-          {errorMessage && (
-            <p className="text-red-500 text-center mb-2">{errorMessage}</p>
-          )}
+            {/* Demo Credentials */}
+            <DemoCredentials />
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Username</span>
-              </label>
-              <input
-                type="text"
-                {...register("username", { required: true })}
-                placeholder="Enter your username"
-                className="input input-bordered w-full rounded-md"
-              />
-            </div>
+            {/* Error Message */}
+            {error && <p className="text-red-500 text-center">{error}</p>}
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Password</span>
-              </label>
-              <div className="relative">
+            {/* Login Form */}
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Username</span>
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  {...register("password", { required: true })}
-                  placeholder="Enter your password"
-                  className="input input-bordered w-full pr-10 rounded-md"
+                  type="text"
+                  name="username"
+                  placeholder="Enter your username"
+                  className="input input-bordered w-full rounded-md"
+                  required
                 />
-                <span
-                  className="absolute inset-y-0 right-3 flex items-center cursor-pointer"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </span>
               </div>
-            </div>
 
-            <div className="text-right">
-              <NavLink to="/forgot-password" className="hover:underline">
-                Forgot Password?
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Password</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Enter your password"
+                    className="input input-bordered w-full pr-10 rounded-md"
+                    required
+                  />
+                  <span
+                    className="absolute inset-y-0 right-3 flex items-center cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <NavLink to="/forgot-password" className="hover:underline text-sm">
+                  Forgot Password?
+                </NavLink>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary w-full rounded-md"
+              >
+                {loading ? "Logging in..." : "Login"}
+              </button>
+            </form>
+
+            <p className="text-center text-sm mt-2">
+              Don't have an account?{" "}
+              <NavLink to="/signup" className="hover:underline">
+                Sign Up
               </NavLink>
-            </div>
-
-            <button type="submit" className="btn btn-primary w-full rounded-md">
-              Login
-            </button>
-          </form>
-
-          <p className="text-center text-sm mt-4">
-            Don't have an account?{" "}
-            <NavLink to="/signup" className="hover:underline">
-              Sign Up
-            </NavLink>
-          </p>
+            </p>
+          </div>
         </div>
       </div>
     </div>

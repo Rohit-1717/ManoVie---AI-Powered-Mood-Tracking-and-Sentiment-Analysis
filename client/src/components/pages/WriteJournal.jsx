@@ -2,16 +2,19 @@ import React, { useState, useEffect, useRef } from "react";
 import { FaMicrophone, FaMicrophoneSlash, FaSave } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import axios from "axios";
 
 import { useSentimentStore } from "../../store/useSentimentStore";
 
 function WriteJournal() {
   const [entry, setEntry] = useState("");
   const [listening, setListening] = useState(false);
+  const [saving, setSaving] = useState(false); // prevent double save
   const recognitionRef = useRef(null);
 
   const { analyzeText } = useSentimentStore();
 
+  // Initialize speech recognition
   useEffect(() => {
     if (!("webkitSpeechRecognition" in window)) {
       toast.error("Your browser doesn't support voice recognition.");
@@ -63,26 +66,30 @@ function WriteJournal() {
     }
   };
 
-  const handleSave = async () => {
-    if (!entry.trim()) {
-      toast.error("Journal entry is empty.");
-      return;
-    }
+  // Save journal and analyze separately
+ const handleSave = async () => {
+  if (!entry.trim()) return toast.error("Journal is empty");
+  if (saving) return;
 
-    toast.loading("Analyzing your journal...");
-    try {
-      const result = await analyzeText(entry);
-      toast.dismiss();
-      toast.success("Journal saved & analyzed successfully!");
+  setSaving(true);
+  toast.loading("Saving journal...");
 
-      // Optional: Use the result
-      console.log("Analyzed Result:", result);
-    } catch (error) {
-      toast.dismiss();
-      toast.error("Something went wrong while saving.");
-      console.error(error);
-    }
-  };
+  try {
+    // Save + analyze in one call
+    const result = await analyzeText(entry);
+    toast.dismiss();
+    toast.success("Journal saved & analyzed successfully!");
+    console.log("Saved journal:", result);
+    setEntry(""); // clear after save
+  } catch (err) {
+    toast.dismiss();
+    toast.error("Failed to save journal");
+    console.error(err);
+  } finally {
+    setSaving(false);
+  }
+};
+
 
   return (
     <div className="bg-base-300 min-h-screen py-10 px-6 md:px-16 lg:px-20 text-base-content">
@@ -134,11 +141,7 @@ function WriteJournal() {
             } shadow-md transition-all duration-300`}
             onClick={toggleRecording}
           >
-            {listening ? (
-              <FaMicrophoneSlash className="text-lg" />
-            ) : (
-              <FaMicrophone className="text-lg" />
-            )}
+            {listening ? <FaMicrophoneSlash className="text-lg" /> : <FaMicrophone className="text-lg" />}
           </motion.button>
         </div>
 
@@ -164,6 +167,7 @@ function WriteJournal() {
         {/* Save Button */}
         <button
           onClick={handleSave}
+          disabled={saving}
           className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-xl shadow-md hover:scale-[1.03] hover:shadow-lg transition-all duration-300 flex items-center gap-2"
         >
           <FaSave className="text-lg" />

@@ -6,29 +6,26 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import moment from "moment";
 
-// ✅ 1. Analyze Text and Store Sentiment & Toxicity Data
+/**
+ * 1️⃣ Analyze Text & Save
+ */
 export const analyzeText = asyncHandler(async (req, res) => {
   const { text } = req.body;
   const userId = req.user._id;
 
-  if (!text) {
-    throw new ApiError(400, "Text is required");
-  }
+  if (!text) throw new ApiError(400, "Text is required");
 
-  // Run sentiment and toxicity analysis in parallel
   const [sentimentResult, toxicityResult] = await Promise.all([
     analyzeSentiment(text),
     analyzeToxicity(text),
   ]);
 
-  // Categorizing toxicity score
   const toxicityValue =
     toxicityResult.attributeScores?.TOXICITY?.summaryScore?.value || 0;
   let toxicityCategory = "low";
   if (toxicityValue > 0.6) toxicityCategory = "high";
   else if (toxicityValue > 0.3) toxicityCategory = "medium";
 
-  // Save the analysis in the database
   const newAnalysis = new UserSentiment({
     userId,
     text,
@@ -37,51 +34,44 @@ export const analyzeText = asyncHandler(async (req, res) => {
     toxicity: toxicityCategory,
     toxicityScore: toxicityValue,
     categoryScores: {
-      TOXICITY:
-        toxicityResult.attributeScores?.TOXICITY?.summaryScore?.value || 0,
-      SEVERE_TOXICITY:
-        toxicityResult.attributeScores?.SEVERE_TOXICITY?.summaryScore?.value ||
-        0,
+      TOXICITY: toxicityResult.attributeScores?.TOXICITY?.summaryScore?.value || 0,
+      SEVERE_TOXICITY: toxicityResult.attributeScores?.SEVERE_TOXICITY?.summaryScore?.value || 0,
       INSULT: toxicityResult.attributeScores?.INSULT?.summaryScore?.value || 0,
       THREAT: toxicityResult.attributeScores?.THREAT?.summaryScore?.value || 0,
-      PROFANITY:
-        toxicityResult.attributeScores?.PROFANITY?.summaryScore?.value || 0,
+      PROFANITY: toxicityResult.attributeScores?.PROFANITY?.summaryScore?.value || 0,
     },
   });
 
   await newAnalysis.save();
 
-  // Response data
-  const responseData = {
-    userId: userId,
-    sentiment: sentimentResult,
-    toxicity: {
-      attributeScores: toxicityResult.attributeScores,
-      languages: toxicityResult.languages || ["en"],
-      detectedLanguages: toxicityResult.detectedLanguages || ["en"],
+  res.status(200).json({
+    statusCode: 200,
+    success: true,
+    data: {
+      userId,
+      sentiment: sentimentResult,
+      toxicity: {
+        attributeScores: toxicityResult.attributeScores,
+        languages: toxicityResult.languages || ["en"],
+        detectedLanguages: toxicityResult.detectedLanguages || ["en"],
+      },
     },
-  };
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, responseData, "Analysis successful"));
+    message: "Analysis successful",
+  });
 });
 
-// ✅ 2. Mood Trend Over Time
+/**
+ * 2️⃣ Mood Trends
+ */
 export const getMoodTrends = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const range = req.query.range || "week";
 
   const now = new Date();
   let startDate;
-
-  if (range === "month") {
-    startDate = new Date(now.setMonth(now.getMonth() - 1));
-  } else if (range === "year") {
-    startDate = new Date(now.setFullYear(now.getFullYear() - 1));
-  } else {
-    startDate = new Date(now.setDate(now.getDate() - 7));
-  }
+  if (range === "month") startDate = new Date(now.setMonth(now.getMonth() - 1));
+  else if (range === "year") startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+  else startDate = new Date(now.setDate(now.getDate() - 7));
 
   const trends = await UserSentiment.aggregate([
     { $match: { userId, analyzedAt: { $gte: startDate } } },
@@ -94,6 +84,11 @@ export const getMoodTrends = asyncHandler(async (req, res) => {
         },
         avgSentiment: { $avg: "$sentimentScore" },
         avgToxicity: { $avg: "$toxicityScore" },
+        avgTOXICITY: { $avg: "$categoryScores.TOXICITY" },
+        avgSEVERE_TOXICITY: { $avg: "$categoryScores.SEVERE_TOXICITY" },
+        avgINSULT: { $avg: "$categoryScores.INSULT" },
+        avgTHREAT: { $avg: "$categoryScores.THREAT" },
+        avgPROFANITY: { $avg: "$categoryScores.PROFANITY" },
       },
     },
     {
@@ -107,16 +102,28 @@ export const getMoodTrends = asyncHandler(async (req, res) => {
         },
         avgSentiment: 1,
         avgToxicity: 1,
+        avgTOXICITY: 1,
+        avgSEVERE_TOXICITY: 1,
+        avgINSULT: 1,
+        avgTHREAT: 1,
+        avgPROFANITY: 1,
         _id: 0,
       },
     },
     { $sort: { date: 1 } },
   ]);
 
-  res.status(200).json(new ApiResponse(200, trends, "Mood trends"));
+  res.status(200).json({
+    statusCode: 200,
+    success: true,
+    data: trends || [],
+    message: "Mood trends",
+  });
 });
 
-// ✅ 3. Get Mood Summary
+/**
+ * 3️⃣ Mood Summary
+ */
 export const getMoodSummary = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
@@ -128,67 +135,72 @@ export const getMoodSummary = asyncHandler(async (req, res) => {
         count: { $sum: 1 },
         avgSentiment: { $avg: "$sentimentScore" },
         avgToxicity: { $avg: "$toxicityScore" },
+        avgTOXICITY: { $avg: "$categoryScores.TOXICITY" },
+        avgSEVERE_TOXICITY: { $avg: "$categoryScores.SEVERE_TOXICITY" },
+        avgINSULT: { $avg: "$categoryScores.INSULT" },
+        avgTHREAT: { $avg: "$categoryScores.THREAT" },
+        avgPROFANITY: { $avg: "$categoryScores.PROFANITY" },
       },
     },
     { $sort: { count: -1 } },
   ]);
 
-  if (results.length === 0) {
-    return res.status(200).json(new ApiResponse(200, null, "No data yet"));
-  }
+  if (!results || results.length === 0)
+    return res.status(200).json({ statusCode: 200, success: true, data: null, message: "No data yet" });
 
-  const moodEmojiMap = {
-    positive: "😊",
-    neutral: "😐",
-    negative: "😔",
-  };
-
+  const moodEmojiMap = { positive: "😊", neutral: "😐", negative: "😔" };
   const topMood = results[0];
 
-  res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        mostFrequentMood: topMood._id,
-        emoji: moodEmojiMap[topMood._id] || "🤖",
-        avgSentiment: topMood.avgSentiment,
-        avgToxicity: topMood.avgToxicity,
-        counts: results.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
+  res.status(200).json({
+    statusCode: 200,
+    success: true,
+    data: {
+      mostFrequentMood: topMood._id,
+      emoji: moodEmojiMap[topMood._id] || "🤖",
+      avgSentiment: topMood.avgSentiment,
+      avgToxicity: topMood.avgToxicity,
+      counts: results.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      categoryScores: {
+        TOXICITY: topMood.avgTOXICITY,
+        SEVERE_TOXICITY: topMood.avgSEVERE_TOXICITY,
+        INSULT: topMood.avgINSULT,
+        THREAT: topMood.avgTHREAT,
+        PROFANITY: topMood.avgPROFANITY,
       },
-      "Mood summary"
-    )
-  );
+    },
+    message: "Mood summary",
+  });
 });
 
-// 4. Total Journals
-
+/**
+ * 4️⃣ Total Journals
+ */
 export const getTotalJournals = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const count = await UserSentiment.countDocuments({ userId });
 
-  res
-    .status(200)
-    .json(
-      new ApiResponse(200, { totalJournals: count }, "Total journal entries")
-    );
+  res.status(200).json({
+    statusCode: 200,
+    success: true,
+    data: { totalJournals: count },
+    message: "Total journal entries",
+  });
 });
 
-// 5.Get Mood History Controller
+/**
+ * 5️⃣ Mood History
+ */
 export const getMoodHistory = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { range = "week" } = req.query;
 
   let startDate = new Date();
-  if (range === "month") {
-    startDate.setMonth(startDate.getMonth() - 1);
-  } else if (range === "year") {
-    startDate.setFullYear(startDate.getFullYear() - 1);
-  } else {
-    startDate.setDate(startDate.getDate() - 7);
-  }
+  if (range === "month") startDate.setMonth(startDate.getMonth() - 1);
+  else if (range === "year") startDate.setFullYear(startDate.getFullYear() - 1);
+  else startDate.setDate(startDate.getDate() - 7);
 
   const entries = await UserSentiment.find({
     userId,
@@ -201,50 +213,53 @@ export const getMoodHistory = asyncHandler(async (req, res) => {
     sentimentScore: entry.sentimentScore,
     toxicity: entry.toxicity,
     toxicityScore: entry.toxicityScore,
+    categoryScores: entry.categoryScores,
     analyzedAt: entry.analyzedAt,
   }));
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, history, "Mood history retrieved successfully"));
+  res.status(200).json({
+    statusCode: 200,
+    success: true,
+    data: history || [],
+    message: "Mood history retrieved successfully",
+  });
 });
 
+/**
+ * 6️⃣ Weekly Stability
+ */
 export const getUserWeeklyStability = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
-  // Get all sentiments from the last 7 days
   const oneWeekAgo = moment().subtract(7, "days").toDate();
 
-  const sentiments = await UserSentiment.find({
-    userId,
-    createdAt: { $gte: oneWeekAgo },
-  });
+  const sentiments = await UserSentiment.find({ userId, createdAt: { $gte: oneWeekAgo } });
 
   if (!sentiments || sentiments.length === 0) {
     return res.status(200).json({
+      statusCode: 200,
       success: true,
-      weeklyStability: "No Data",
+      data: { weeklyStability: "No Data" },
+      message: "No sentiment entries in the last week",
     });
   }
 
-  const scores = sentiments.map((entry) => entry.sentimentScore);
+  const scores = sentiments.map((e) => e.sentimentScore);
   const max = Math.max(...scores);
   const min = Math.min(...scores);
   const diff = max - min;
 
   let weeklyStability = "Stable";
-
   if (diff > 0.4) weeklyStability = "Unstable";
   else if (diff > 0.2) weeklyStability = "Slightly Unstable";
 
   res.status(200).json({
+    statusCode: 200,
     success: true,
-    weeklyStability,
-    scoreRange: {
-      min: min.toFixed(3),
-      max: max.toFixed(3),
-      difference: diff.toFixed(3),
+    data: {
+      weeklyStability,
+      scoreRange: { min, max, difference: diff },
+      totalEntries: sentiments.length,
     },
-    totalEntries: sentiments.length,
+    message: "Weekly stability calculated",
   });
 });

@@ -199,7 +199,7 @@ function About() {
         </div>
       </div>
 
-      {/* Meet the Developers Section */}
+      {/* Meet the Developers Section
       <div className="bg-base-300 py-16">
         <div className="container mx-auto px-8 md:px-16 lg:px-20">
           <h2 className="text-5xl font-bold text-zinc-600 mb-10">
@@ -234,7 +234,7 @@ function About() {
             ))}
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

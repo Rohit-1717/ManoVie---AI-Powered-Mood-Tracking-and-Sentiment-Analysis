@@ -4,13 +4,16 @@ import { NavLink, useNavigate } from "react-router-dom";
 import useThemeStore from "../../hooks/useTheme";
 import useAuthStore from "../../store/useAuthStore";
 
+
 function Nav() {
   const { theme, toggleTheme } = useThemeStore();
-  const { isAuthenticated, user, logoutUser } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logoutUser();
+  // ✅ read from Zustand instead of hardcoded
+  const { user, isAuthenticated, logoutUser } = useAuthStore();
+
+  const handleLogout = async () => {
+    await logoutUser();
     navigate("/login");
   };
 
@@ -71,7 +74,7 @@ function Nav() {
           </div>
         </div>
 
-        {/* Center Navigation (visible on desktop) */}
+        {/* Center Nav (Desktop) */}
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal px-1">
             <li>
@@ -100,8 +103,8 @@ function Nav() {
             )}
           </button>
 
-          {/* Authenticated Section */}
-          {isAuthenticated && user ? (
+          {/* ✅ Logged in / out section */}
+          {isAuthenticated ? (
             <div className="dropdown dropdown-end">
               <div
                 tabIndex={0}
@@ -111,7 +114,7 @@ function Nav() {
               >
                 <div className="w-10 rounded-full">
                   <img
-                    src={user.avatar || "/default-avatar.png"}
+                    src={user?.avatar || "/default-avatar.png"}
                     alt="User Avatar"
                   />
                 </div>

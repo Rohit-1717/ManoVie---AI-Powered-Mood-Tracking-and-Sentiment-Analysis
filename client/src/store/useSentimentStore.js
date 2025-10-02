@@ -1,7 +1,6 @@
-// src/store/useSentimentStore.js
 import { create } from "zustand";
 import axios from "axios";
-import useAuthStore from "./useAuthStore";
+import { toast } from "react-hot-toast";
 
 export const useSentimentStore = create((set, get) => ({
   sentimentTrend: [],
@@ -9,168 +8,193 @@ export const useSentimentStore = create((set, get) => ({
   totalJournals: 0,
   averageMood: null,
   moodSummary: null,
+  moodDistribution: [],
   weeklyStability: null,
   error: null,
   loading: false,
   loadingWeeklyStability: false,
 
-  // 1. Analyze text and store result
   analyzeText: async (text) => {
-    const token = useAuthStore.getState().token;
-    if (!token) return set({ error: "User not authenticated" });
-
     try {
       set({ loading: true });
       const res = await axios.post(
-        "http://localhost:5000/api/v1/users/sentiments/analyze",
+        `${import.meta.env.VITE_SENTIMENTS_URL}/analyze`,
         { text },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { withCredentials: true }
       );
       set({ loading: false });
-      return res.data.data; // returns { sentiment, toxicity }
+      return res.data?.data ?? null;
     } catch (err) {
-      set({
-        error: err.response?.data?.message || err.message,
-        loading: false,
-      });
+      const message =
+        err?.response?.data?.message || err?.message || "Analysis failed";
+      set({ error: message, loading: false });
+      toast.error(message);
+      return null;
     }
   },
 
-  // 2. Mood trend (Line Chart etc.)
   fetchSentimentTrend: async (range = "week") => {
-    const token = useAuthStore.getState().token;
-    if (!token) return set({ error: "User not authenticated" });
-
     try {
       set({ loading: true });
       const res = await axios.get(
-        `http://localhost:5000/api/v1/users/sentiments/trends?range=${range}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        `${import.meta.env.VITE_SENTIMENTS_URL}/trends?range=${range}`,
+        { withCredentials: true }
       );
-      set({ sentimentTrend: res.data.data || [], loading: false });
+
+      const raw = res?.data?.data || [];
+      const transformed = raw.map((item) => ({
+        ...item,
+        createdAt: item.date
+          ? new Date(item.date).toISOString()
+          : new Date().toISOString(),
+        avgSentiment: item.avgSentiment ?? 0,
+        avgToxicity: item.avgToxicity ?? 0,
+        categoryScores: item.categoryScores || {},
+      }));
+
+      set({ sentimentTrend: transformed, loading: false });
+      return transformed;
     } catch (err) {
-      set({
-        error: err.response?.data?.message || err.message,
-        loading: false,
-      });
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch trends";
+      set({ error: message, loading: false });
+      console.error("fetchSentimentTrend:", message);
+      return [];
     }
   },
 
-  // 3. Mood summary
   fetchAverageMood: async () => {
-    const token = useAuthStore.getState().token;
-    if (!token) return set({ error: "User not authenticated" });
-
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/v1/users/sentiments/summary",
+        `${import.meta.env.VITE_SENTIMENTS_URL}/summary`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          withCredentials: true,
         }
       );
+
+      const data = res?.data?.data ?? null;
+
+      if (!data) {
+        set({ averageMood: null, moodSummary: null, moodDistribution: [] });
+        return null;
+      }
+
+      const distribution =
+        data.counts && typeof data.counts === "object"
+          ? Object.entries(data.counts).map(([label, value]) => ({
+              label,
+              value,
+            }))
+          : [];
+
       set({
         averageMood: {
-          label: res.data.data.mostFrequentMood,
-          emoji: res.data.data.emoji,
-          avgSentiment: res.data.data.avgSentiment,
-          avgToxicity: res.data.data.avgToxicity,
+          label: data.mostFrequentMood ?? null,
+          emoji: data.emoji ?? null,
+          avgSentiment: data.avgSentiment ?? 0,
+          avgToxicity: data.avgToxicity ?? 0,
+          categoryScores: data.categoryScores || {},
         },
-        moodSummary: res.data.data,
+        moodSummary: data,
+        moodDistribution: distribution,
       });
+
+      return data;
     } catch (err) {
-      set({ error: err.response?.data?.message || err.message });
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch summary";
+      set({ error: message });
+      console.error("fetchAverageMood:", message);
+      return null;
     }
   },
 
-  // 4. Total journals
   fetchTotalJournals: async () => {
-    const token = useAuthStore.getState().token;
-    if (!token) return set({ error: "User not authenticated" });
-
     try {
       set({ loading: true });
       const res = await axios.get(
-        "http://localhost:5000/api/v1/users/sentiments/total",
+        `${import.meta.env.VITE_SENTIMENTS_URL}/total`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          withCredentials: true,
         }
       );
-      set({ totalJournals: res.data.data.totalJournals, loading: false });
+      const val = res?.data?.data?.totalJournals ?? 0;
+      set({ totalJournals: val, loading: false });
+      return val;
     } catch (err) {
-      set({
-        error: err.response?.data?.message || err.message,
-        loading: false,
-      });
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch total journals";
+      set({ error: message, loading: false });
+      console.error("fetchTotalJournals:", message);
+      return 0;
     }
   },
 
-  // 5. Mood history (recent entries)
-  fetchUserSentiments: async (range = "week") => {
-    const token = useAuthStore.getState().token;
-    if (!token) return set({ error: "User not authenticated" });
-
-    try {
-      set({ loading: true });
-      const res = await axios.get(
-        `http://localhost:5000/api/v1/users/sentiments/history?range=${range}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      set({ userSentiments: res.data.data || [], loading: false });
-    } catch (err) {
-      set({
-        error: err.response?.data?.message || err.message,
-        loading: false,
-      });
-    }
-  },
-
-  // 6. Weekly stability
   fetchWeeklyStability: async () => {
-    const token = useAuthStore.getState().token;
-    if (!token) return set({ error: "User not authenticated" });
-
     try {
       set({ loadingWeeklyStability: true });
       const res = await axios.get(
-        "http://localhost:5000/api/v1/users/sentiments/weekly-stability",
+        `${import.meta.env.VITE_SENTIMENTS_URL}/weekly-stability`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          withCredentials: true,
         }
       );
+
+      const data = res?.data?.data ?? null;
+
+      if (!data || data.weeklyStability === "No Data") {
+        set({ weeklyStability: null, loadingWeeklyStability: false });
+        return null;
+      }
+
       set({
         weeklyStability: {
-          stability: res.data.weeklyStability,
-          scoreRange: res.data.scoreRange,
-          totalEntries: res.data.totalEntries,
+          stability: data.weeklyStability,
+          scoreRange: data.scoreRange || null,
+          totalEntries: data.totalEntries ?? 0,
         },
         loadingWeeklyStability: false,
       });
-    } catch (error) {
-      set({
-        error: error.response?.data?.message || error.message,
-        loadingWeeklyStability: false,
-      });
+
+      return data;
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch weekly stability";
+      set({ error: message, loadingWeeklyStability: false });
+      console.error("fetchWeeklyStability:", message);
+      return null;
     }
   },
 
-  // Utility method to clear errors
+  fetchMoodHistory: async (range = "week") => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_SENTIMENTS_URL}/history?range=${range}`,
+        { withCredentials: true }
+      );
+      const data = res?.data?.data ?? [];
+      set({ userSentiments: data });
+      return data;
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch mood history";
+      set({ error: message });
+      console.error("fetchMoodHistory:", message);
+      return [];
+    }
+  },
+
   clearError: () => set({ error: null }),
 }));
+
+export default useSentimentStore;

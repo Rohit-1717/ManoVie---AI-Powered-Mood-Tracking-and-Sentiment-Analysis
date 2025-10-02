@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Nav from "./components/nav/Nav.jsx";
 import Hero from "./components/hero/Hero.jsx";
 import Footer from "./components/footer/Footer.jsx";
@@ -24,17 +24,49 @@ import ViewReport from "./components/pages/ViewReport.jsx";
 
 function App() {
   const { theme } = useTheme();
-  const { isAuthenticated, loading } = useAuthStore();
+  const {
+    isAuthenticated,
+    authChecked,
+    fetchUserFromToken,
+    logoutUser,
+  } = useAuthStore();
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  // Fetch user on app load
   useEffect(() => {
-    useAuthStore.getState().fetchUserFromToken();
+    const initAuth = async () => {
+      try {
+        await fetchUserFromToken();
+      } catch {
+        logoutUser();
+      } finally {
+        setLoading(false);
+      }
+    };
+    initAuth();
   }, []);
 
+  // Optional: refresh access token every 10 minutes
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        if (isAuthenticated) {
+          await fetchUserFromToken();
+        }
+      } catch {
+        logoutUser();
+      }
+    }, 1000 * 60 * 10);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
   const ProtectedRoute = ({ children }) => {
+    if (!authChecked) return null; // wait until auth status checked
     return isAuthenticated ? children : <Navigate to="/login" replace />;
   };
 
@@ -103,7 +135,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/dashboard/ViewReport"
           element={
@@ -113,7 +144,7 @@ function App() {
           }
         />
 
-        {/* Optional fallback */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Footer />
