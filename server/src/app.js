@@ -7,7 +7,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: ["https://mano-vie-ai-powered-mood-tracking-a.vercel.app","http://localhost:5173"],
     credentials: true,
   })
 );
