@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://manovie-ai-powered-mood-tracking-and.onrender.com/api/:path*"
+      "destination": "https://manovie-ai-powered-mood-tracking-and.onrender.com:path*"
     }
   ],
   "redirects": [
